@@ -1,0 +1,31 @@
+@page
+@model DetailsModel
+@{
+    ViewData["Title"] = Model.Painting?.Title ?? "Tavla";
+}
+
+@if (Model.Painting == null)
+{
+    <p>Tavlan hittades inte.</p>
+}
+else
+{
+    <div class="detail-view">
+        <img src="/Image?fileName=@Model.Painting.ImageUrl" alt="@Model.Painting.Title" />
+        <div class="detail-info">
+            <h1>@Model.Painting.Title</h1>
+            <div class="meta">
+                <span><strong>Medium</strong> &nbsp; @Model.Painting.Medium</span>
+                <span><strong>År</strong> &nbsp; @Model.Painting.Year</span>
+            </div>
+            <p>@Model.Painting.Description</p>
+            <div class="detail-actions">
+                <a href="/" class="back-link">Tillbaka till galleriet</a>
+                <form method="post">
+                    <input type="hidden" name="id" value="@Model.Painting.Id" />
+                    <button type="submit" class="btn-danger">Ta bort</button>
+                </form>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,22 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Mitt galleri";
+}
+
+<h1>Mitt galleri</h1>
+<p class="page-subtitle">@Model.Paintings.Count verk</p>
+<a href="/Upload" class="btn">Ladda upp ny tavla</a>
+
+<div class="gallery">
+    @foreach (var painting in Model.Paintings)
+    {
+        <a href="/Details?id=@painting.Id" class="card">
+            <img src="/Image?fileName=@painting.ImageUrl" alt="@painting.Title" />
+            <div class="card-info">
+                <h2>@painting.Title</h2>
+                <p>@painting.Medium &middot; @painting.Year</p>
+            </div>
+        </a>
+    }
+</div>

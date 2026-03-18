@@ -1,0 +1,34 @@
+@page
+@model UploadModel
+@{
+    ViewData["Title"] = "Ladda upp tavla";
+}
+
+<h1>Ny tavla</h1>
+<p class="page-subtitle">Fyll i information och välj en bild</p>
+
+<div class="form-wrap">
+    <form method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Titel</label>
+            <input type="text" asp-for="Title" required />
+        </div>
+        <div class="form-group">
+            <label>Beskrivning</label>
+            <textarea asp-for="Description"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Medium (t.ex. Olja, Akvarell, Gouache)</label>
+            <input type="text" asp-for="Medium" />
+        </div>
+        <div class="form-group">
+            <label>År</label>
+            <input type="number" asp-for="Year" />
+        </div>
+        <div class="form-group">
+            <label>Bild</label>
+            <input type="file" name="ImageFile" accept="image/*" required />
+        </div>
+        <button type="submit" class="btn">Ladda upp</button>
+    </form>
+</div>

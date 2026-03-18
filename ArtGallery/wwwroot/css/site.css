@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+    background-color: #faf7f2;
+    color: #2c2416;
+}
+
+/* ── Navigering ── */
+header {
+    background-color: #2c2416;
+    padding: 1.2rem 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header .brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: #e8d5b0;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+}
+
+header nav a {
+    color: #b89d72;
+    text-decoration: none;
+    margin-left: 2rem;
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+}
+
+header nav a:hover { color: #e8d5b0; }
+
+/* ── Huvudinnehåll ── */
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+}
+
+h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 400;
+    color: #2c2416;
+    margin-bottom: 0.3rem;
+}
+
+.page-subtitle {
+    color: #8a7560;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 2.5rem;
+}
+
+/* ── Knappar ── */
+.btn {
+    display: inline-block;
+    background-color: #2c2416;
+    color: #e8d5b0;
+    padding: 0.65rem 1.6rem;
+    border-radius: 2px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 2.5rem;
+}
+
+.btn:hover { background-color: #4a3c28; }
+
+.btn-danger {
+    background-color: transparent;
+    color: #9b4a3a;
+    border: 1px solid #9b4a3a;
+    padding: 0.5rem 1.2rem;
+    border-radius: 2px;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #9b4a3a;
+    color: #faf7f2;
+}
+
+/* ── Galleriöversikt ── */
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 2rem;
+}
+
+.card {
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #e2d8cc;
+    border-radius: 2px;
+    overflow: hidden;
+    transition: transform 0.25s, box-shadow 0.25s;
+    display: block;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(44, 36, 22, 0.12);
+}
+
+.card img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+}
+
+.card-info {
+    padding: 1rem 1.1rem;
+    border-top: 1px solid #e2d8cc;
+}
+
+.card-info h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    margin-bottom: 0.2rem;
+}
+
+.card-info p {
+    font-size: 0.8rem;
+    color: #8a7560;
+    letter-spacing: 0.03em;
+}
+
+/* ── Detaljsida ── */
+.detail-view {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 3.5rem;
+    align-items: start;
+    margin-top: 1rem;
+}
+
+.detail-view img {
+    width: 100%;
+    border-radius: 2px;
+    box-shadow: 0 12px 40px rgba(44, 36, 22, 0.15);
+}
+
+.detail-info {
+    padding-top: 1rem;
+}
+
+.detail-info h1 {
+    font-size: 2.2rem;
+    margin-bottom: 1rem;
+}
+
+.detail-info .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e2d8cc;
+}
+
+.detail-info .meta span {
+    font-size: 0.9rem;
+    color: #8a7560;
+}
+
+.detail-info .meta strong {
+    color: #2c2416;
+    font-weight: 400;
+}
+
+.detail-info p {
+    line-height: 1.8;
+    color: #4a3c28;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+}
+
+.detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.back-link {
+    font-size: 0.85rem;
+    color: #8a7560;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.back-link:hover { color: #2c2416; }
+
+/* ── Uppladdningsformulär ── */
+.form-group {
+    margin-bottom: 1.4rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a7560;
+    margin-bottom: 0.4rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid #e2d8cc;
+    border-radius: 2px;
+    background: #fff;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.95rem;
+    color: #2c2416;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #b89d72;
+}
+
+.form-group textarea { min-height: 100px; resize: vertical; }
+
+.form-wrap { max-width: 560px; }
+
+/* Meny-länkfärg — turkos */
+header nav a {
+    color: #7ecec4;
+}
+
+header nav a:hover { color: #e8d5b0; }
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.8rem;
+    color: #8a7560;
+    border-top: 1px solid #e2d8cc;
+    margin-top: 4rem;
+}
