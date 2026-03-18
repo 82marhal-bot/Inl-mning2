@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      - name: Installera .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Återställ beroenden
+        run: dotnet restore
+
+      - name: Bygg applikationen
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Kör tester
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+  deploy:
+    name: Driftsätt
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      - name: Installera .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publicera applikationen
+        run: dotnet publish ArtGallery/ArtGallery.csproj --configuration Release --output ./publish
+
+      - name: Driftsätt via Bastion till App Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          BASTION_HOST: ${{ secrets.BASTION_HOST }}
+          APP_SERVER_IP: ${{ secrets.APP_SERVER_IP }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $BASTION_HOST >> ~/.ssh/known_hosts
+
+          # Kopiera filer via Bastion till App Server
+          scp -o ProxyJump=azureuser@$BASTION_HOST \
+            -r ./publish/* \
+            azureuser@$APP_SERVER_IP:/var/www/artgallery/
+
+          # Starta om tjänsten på App Server
+          ssh -o ProxyJump=azureuser@$BASTION_HOST \
+            azureuser@$APP_SERVER_IP \
+            "sudo systemctl restart artgallery"
