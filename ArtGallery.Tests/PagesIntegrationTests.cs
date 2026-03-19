@@ -68,4 +68,14 @@ public class PagesIntegrationTests : IClassFixture<WebApplicationFactory<Program
 
         Assert.Contains("hittades inte", content);
     }
+
+    [Fact]
+public async Task Edit_ShouldReturn200()
+{
+    _mockCosmos.Setup(c => c.GetByIdAsync("1")).ReturnsAsync(
+        new Painting { Id = "1", Title = "Testmalning", Medium = "Gouache", Year = 2024, ImageUrl = "test.jpg" });
+
+    var response = await _client.GetAsync("/Edit?id=1");
+    Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+}
 }
