@@ -105,7 +105,7 @@ Projektet har 10 tester uppdelade i tre kategorier:
 |---|---|---|
 | Enhetstester — CosmosDbService | 3 | Testar att data sparas, hämtas och raderas korrekt |
 | Enhetstester — BlobStorageService | 2 | Testar uppladdning och borttagning av bildfiler |
-| Integrationstester — Sidor | 4 | Testar att sidorna svarar korrekt via HTTP |
+| Integrationstester — Sidor | 5 | Testar att sidorna svarar korrekt via HTTP |
 
 ### Kör testerna
 
@@ -138,6 +138,12 @@ Git Push
            │ Godkänd
            ▼
 ┌─────────────────────┐
+│   Infrastruktur     │
+│  az bicep deploy    │
+└──────────┬──────────┘
+           │ Klar
+           ▼
+┌─────────────────────┐
 │   CD — Deploy       │
 │  dotnet publish     │
 │  SSH via Bastion    │
@@ -152,6 +158,7 @@ CD-steget körs enbart vid push till `main` och kräver att följande GitHub Sec
 | `SSH_PRIVATE_KEY` | Privat SSH-nyckel för åtkomst via Bastion |
 | `BASTION_HOST` | Bastionens publika IP-adress |
 | `APP_SERVER_IP` | App Serverns interna IP-adress |
+| `AZURE_CREDENTIALS` | Azure service principal för Bicep-driftsättning |
 
 ---
 
@@ -170,6 +177,7 @@ ArtGallery/
 │   ├── Index.cshtml             # Galleriet
 │   ├── Upload.cshtml            # Uppladdning
 │   ├── Details.cshtml           # Detaljvy
+│   ├── Edit.cshtml              # Redigera tavla
 │   └── Image.cshtml             # Bildservare
 └── wwwroot/
     └── css/site.css             # Styling
