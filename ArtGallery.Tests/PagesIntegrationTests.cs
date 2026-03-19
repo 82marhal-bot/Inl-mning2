@@ -18,11 +18,13 @@ public class PagesIntegrationTests : IClassFixture<WebApplicationFactory<Program
         _mockBlob = new Mock<IBlobStorageService>();
 
         _mockCosmos.Setup(c => c.GetAllAsync()).ReturnsAsync(new List<Painting>
+        
 {
    new() { Id = "1", Title = "Testmalning", Medium = "Gouache", Year = 2024, ImageUrl = "test.jpg" }
 });
 
         _mockCosmos.Setup(c => c.GetByIdAsync(It.IsAny<string>())).ReturnsAsync((Painting?)null);
+        _mockCosmos.Setup(c => c.UpdateAsync(It.IsAny<Painting>())).Returns(Task.CompletedTask);
 
         _client = factory.WithWebHostBuilder(builder =>
         {

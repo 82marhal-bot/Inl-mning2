@@ -43,6 +43,8 @@ public class CosmosDbService : ICosmosDbService
     public virtual async Task AddAsync(Painting painting) =>
         await _container.CreateItemAsync(painting, new PartitionKey(painting.Id));
 
+public virtual async Task UpdateAsync(Painting painting) =>
+    await _container.ReplaceItemAsync(painting, painting.Id, new PartitionKey(painting.Id));
     public virtual async Task DeleteAsync(string id) =>
         await _container.DeleteItemAsync<Painting>(id, new PartitionKey(id));
 }

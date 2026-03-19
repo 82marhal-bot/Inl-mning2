@@ -8,4 +8,5 @@ public interface ICosmosDbService
     Task<Painting?> GetByIdAsync(string id);
     Task AddAsync(Painting painting);
     Task DeleteAsync(string id);
+    Task UpdateAsync(Painting painting);
 }

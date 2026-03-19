@@ -20,12 +20,14 @@ else
             </div>
             <p>@Model.Painting.Description</p>
             <div class="detail-actions">
-                <a href="/" class="back-link">Tillbaka till galleriet</a>
-                <form method="post">
-                    <input type="hidden" name="id" value="@Model.Painting.Id" />
-                    <button type="submit" class="btn-danger">Ta bort</button>
-                </form>
-            </div>
+    <a href="/" class="back-link">Tillbaka till galleriet</a>
+    <a href="/Edit?id=@Model.Painting.Id" class="btn">Redigera</a>
+    <button type="submit" form="delete-form" class="btn-danger">Ta bort</button>
+</div>
+
+<form id="delete-form" method="post">
+    <input type="hidden" name="id" value="@Model.Painting.Id" />
+</form>
         </div>
     </div>
 }

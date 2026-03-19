@@ -1,0 +1,42 @@
+@page
+@model EditModel
+@{
+    ViewData["Title"] = "Redigera tavla";
+}
+
+<h1>Redigera tavla</h1>
+<p class="page-subtitle">Uppdatera information om tavlan</p>
+
+<div class="form-wrap">
+    @if (Model.Painting == null)
+    {
+        <p>Tavlan hittades inte.</p>
+    }
+    else
+    {
+        <form method="post">
+            <input type="hidden" asp-for="Painting.Id" />
+            <input type="hidden" asp-for="Painting.ImageUrl" />
+            <div class="form-group">
+                <label>Titel</label>
+                <input type="text" asp-for="Painting.Title" required />
+            </div>
+            <div class="form-group">
+                <label>Beskrivning</label>
+                <textarea asp-for="Painting.Description"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Medium (t.ex. Olja, Akvarell, Gouache)</label>
+                <input type="text" asp-for="Painting.Medium" />
+            </div>
+            <div class="form-group">
+                <label>År</label>
+                <input type="number" asp-for="Painting.Year" />
+            </div>
+            <div class="detail-actions">
+                <a href="/Details?id=@Model.Painting.Id" class="back-link">Avbryt</a>
+                <button type="submit" class="btn">Spara ändringar</button>
+            </div>
+        </form>
+    }
+</div>
