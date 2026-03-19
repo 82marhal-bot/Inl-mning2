@@ -29,10 +29,38 @@ jobs:
       - name: Kör tester
         run: dotnet test --no-build --configuration Release --verbosity normal
 
-  deploy:
-    name: Driftsätt
+infrastructure:
+    name: Driftsätt infrastruktur
     runs-on: ubuntu-latest
     needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      - name: Logga in på Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Skapa resursgrupp om den inte finns
+        run: |
+          az group create \
+            --name rg-artgallery-dev \
+            --location northeurope
+
+      - name: Driftsätt Bicep
+        run: |
+          az deployment group create \
+            --resource-group rg-artgallery-dev \
+            --template-file infrastructure/main.bicep \
+            --mode Incremental
+
+deploy:
+    name: Driftsätt applikation
+    runs-on: ubuntu-latest
+    needs: [build-and-test, infrastructure]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
