@@ -400,7 +400,9 @@ output appInternalIp string = appNic.properties.ipConfigurations[0].properties.p
 
 output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
 // Detta hämtar primär nyckel för Cosmos DB automatiskt
+@secure()
 output cosmosKey string = listKeys(cosmosAccount.id, cosmosAccount.apiVersion).primaryMasterKey
 
 // Detta bygger ihop Connection String för Blob Storage
-output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${listKeys(storage.id, storage.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+@secure()
+output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
