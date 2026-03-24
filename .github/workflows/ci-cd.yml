@@ -90,12 +90,17 @@ jobs:
           ssh-keyscan -H $BASTION_HOST >> ~/.ssh/known_hosts
           ssh-keyscan -H $APP_SERVER_IP >> ~/.ssh/known_hosts
 
-          # Kopiera filer via Bastion-hopp
-          scp -o ProxyJump=azureuser@$BASTION_HOST \
+          # 1. Förbered mappen på målservern
+          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@$BASTION_HOST \
+            azureuser@$APP_SERVER_IP \
+            "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
+
+          # 2. Kopiera filer via Bastion-hopp
+          scp -o StrictHostKeyChecking=no -o ProxyJump=azureuser@$BASTION_HOST \
             -r ./publish/* \
             azureuser@$APP_SERVER_IP:/var/www/artgallery/
 
-          # Starta om tjänsten så att den nya koden laddas in
-          ssh -o ProxyJump=azureuser@$BASTION_HOST \
+          # 3. Starta om tjänsten så att den nya koden laddas in
+          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@$BASTION_HOST \
             azureuser@$APP_SERVER_IP \
             "sudo systemctl restart artgallery"
