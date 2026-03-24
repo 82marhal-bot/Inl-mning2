@@ -80,6 +80,7 @@ jobs:
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} -r ./publish/* azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
           # --- APP SERVER: STARTA MED COSMOS DB INFO ---
+          # Här använder vi namnen från din bild: ArtGallery och Paintings
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "chmod +x /var/www/artgallery/ArtGallery && \
           echo '[Unit]
           Description=ArtGallery App
@@ -94,9 +95,9 @@ jobs:
           Environment=ASPNETCORE_ENVIRONMENT=Production
           Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
           Environment=ASPNETCORE_DATAPROTECTION__KEYMANAGEMENTOPTIONS__XMLREPOSITORY__DIRECTORYPATH=/var/www/artgallery/keys
-          Environment=CosmosDb__ConnectionString=${{ secrets.COSMOSDB_CONNECTION_STRING }}
-          Environment=CosmosDb__DatabaseName=ArtGalleryDb
-          Environment=CosmosDb__ContainerName=ArtItems
+          Environment=CosmosDb__ConnectionString=\"${{ secrets.COSMOSDB_CONNECTION_STRING }}\"
+          Environment=CosmosDb__DatabaseName=ArtGallery
+          Environment=CosmosDb__ContainerName=Paintings
 
           [Install]
           WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && \
