@@ -113,13 +113,13 @@ jobs:
             azureuser@10.0.1.4 \
             "sudo apt-get update && sudo apt-get install -y nginx"
 
-          # Steg 6: Konfigurera Reverse Proxy (Pekar mot App Server)
+          # Steg 6: Konfigurera Reverse Proxy (Pekar mot App Server på port 5000)
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@10.0.1.4 \
             "echo 'server {
                 listen 80;
                 location / {
-                    proxy_pass http://${{ secrets.APP_SERVER_IP }};
+                    proxy_pass http://${{ secrets.APP_SERVER_IP }}:5000;
                     proxy_http_version 1.1;
                     proxy_set_header Upgrade \$http_upgrade;
                     proxy_set_header Connection keep-alive;
