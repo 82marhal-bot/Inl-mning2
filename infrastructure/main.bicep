@@ -167,6 +167,19 @@ resource nsgApp 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
         }
       }
       {
+        name: 'Allow-SSH-From-Bastion'
+        properties: {
+          priority: 1000
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Inbound'
+          sourceAddressPrefix: '10.0.2.0/24' // Detta är ditt Bastion-subnät
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '22'
+        }
+      }
+      {
         name: 'Deny-All'
         properties: {
           priority: 4000
