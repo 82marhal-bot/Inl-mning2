@@ -14,14 +14,14 @@ var appSubnetName = 'snet-app'
 var dataSubnetName = 'snet-data'
 
 var appInitScript = base64('''#!/bin/bash
-# Installera .NET 10 Runtime (Matchar din YAML-pipeline)
+# Installera .NET 10 Runtime
 sudo apt-get update && sudo apt-get install -y dotnet-runtime-10.0
 
 # Skapa mappen för applikationen
 sudo mkdir -p /var/www/artgallery
 sudo chown -R ${adminUsername}:${adminUsername} /var/www/artgallery
 
-# Skapa en systemd-servicefil så appen startar automatiskt
+# Skapa en systemd-servicefil
 cat <<EOF | sudo tee /etc/systemd/system/artgallery.service
 [Unit]
 Description=ArtGallery .NET 10 Web App
@@ -173,9 +173,9 @@ resource nsgApp 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
           protocol: 'Tcp'
           access: 'Allow'
           direction: 'Inbound'
-          sourceAddressPrefix: '10.0.2.0/24' // Detta är ditt Bastion-subnät
+          sourceAddressPrefix: '10.0.2.0/24' // Bastion-subnätet är källan
           sourcePortRange: '*'
-          destinationAddressPrefix: '*'
+          destinationAddressPrefix: '*'      // Denna VM är målet
           destinationPortRange: '22'
         }
       }
@@ -415,10 +415,10 @@ output proxyPublicIp string = proxyPublicIp.properties.ipAddress
 output appInternalIp string = appNic.properties.ipConfigurations[0].properties.privateIPAddress
 
 output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
-// Detta hämtar primär nyckel för Cosmos DB automatiskt
-@secure()
-output cosmosKey string = listKeys(cosmosAccount.id, cosmosAccount.apiVersion).primaryMasterKey
 
-// Detta bygger ihop Connection String för Blob Storage
+// Fixade varningarna genom att använda resurs-referenser istället för strängar
+@secure()
+output cosmosKey string = cosmosAccount.listKeys().primaryMasterKey
+
 @secure()
 output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
