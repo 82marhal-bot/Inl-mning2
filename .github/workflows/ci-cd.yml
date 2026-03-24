@@ -90,10 +90,10 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-          # Steg 1: Förbered mappar och rättigheter
+          # Steg 1: Förbered mappar och STOPPA tjänsten (viktigt för att kunna skriva över ArtGallery-filen)
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo mkdir -p /var/www/artgallery/keys && sudo chown -R azureuser:azureuser /var/www/artgallery"
+            "sudo systemctl stop artgallery || true && sudo mkdir -p /var/www/artgallery/keys && sudo chown -R azureuser:azureuser /var/www/artgallery"
 
           # Steg 2: Kopiera filer
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
@@ -105,7 +105,7 @@ jobs:
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "chmod +x /var/www/artgallery/ArtGallery"
 
-          # Steg 4: Skapa systemd-tjänstefil (MED FIX FÖR DATA PROTECTION KEYS)
+          # Steg 4: Skapa/Uppdatera systemd-tjänstefil och STARTA igen
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "echo '[Unit]
