@@ -3,55 +3,41 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  pull_request: [ main ]
 
 jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Hämta koden
         uses: actions/checkout@v4
-
-      - name: Installera .NET för bygget
+      - name: Installera .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-
-      - name: Återställ beroenden
-        run: dotnet restore
-
-      - name: Bygg applikationen
-        run: dotnet build --no-restore --configuration Release
-
+      - name: Återställ & Bygg
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
       - name: Kör tester
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test --no-build --configuration Release
 
   infrastructure:
     name: Driftsätt infrastruktur
     runs-on: ubuntu-latest
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - name: Hämta koden
         uses: actions/checkout@v4
-
       - name: Logga in på Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Skapa resursgrupp om den inte finns
-        run: |
-          az group create \
-            --name rg-artgallery-dev \
-            --location northeurope
-
       - name: Driftsätt Bicep
         run: |
+          az group create --name rg-artgallery-dev --location northeurope
           az deployment group create \
             --resource-group rg-artgallery-dev \
             --template-file infrastructure/main.bicep \
@@ -63,17 +49,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-test, infrastructure]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
       - name: Hämta koden
         uses: actions/checkout@v4
-
-      - name: Installera .NET för bygget
+      - name: Installera .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-
-      - name: Publicera Self-Contained Applikation
+      - name: Publicera Applikation
         run: dotnet publish ArtGallery/ArtGallery.csproj --configuration Release --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish
 
       - name: Driftsätt via Bastion
@@ -81,33 +64,23 @@ jobs:
           mkdir -p ~/.ssh
           printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
           cat <<EOF > ~/.ssh/config
           Host *
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
             LogLevel ERROR
           EOF
-          chmod 600 ~/.ssh/config
 
           # --- APP SERVER: FÖRBEREDELSER ---
-          echo "Stoppar tjänsten artgallery..."
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo systemctl stop artgallery || true"
-          
-          echo "Rensar gamla filer och skapar mappar..."
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo rm -rf /var/www/artgallery/*"
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo mkdir -p /var/www/artgallery/keys"
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo chown -R azureuser:azureuser /var/www/artgallery"
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo rm -rf /var/www/artgallery/* && sudo mkdir -p /var/www/artgallery/keys && sudo chown -R azureuser:azureuser /var/www/artgallery"
 
-          # --- APP SERVER: KOPIERING & START ---
-          echo "Laddar upp den nya versionen..."
+          # --- APP SERVER: KOPIERING ---
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} -r ./publish/* azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          echo "Sätter körrättigheter..."
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "chmod +x /var/www/artgallery/ArtGallery"
-
-          echo "Uppdaterar systemd-tjänstefilen..."
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "echo '[Unit]
+          # --- APP SERVER: STARTA MED COSMOS DB INFO ---
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "chmod +x /var/www/artgallery/ArtGallery && \
+          echo '[Unit]
           Description=ArtGallery App
           After=network.target
 
@@ -120,18 +93,17 @@ jobs:
           Environment=ASPNETCORE_ENVIRONMENT=Production
           Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
           Environment=ASPNETCORE_DATAPROTECTION__KEYMANAGEMENTOPTIONS__XMLREPOSITORY__DIRECTORYPATH=/var/www/artgallery/keys
+          Environment=CosmosDb__ConnectionString=${{ secrets.COSMOSDB_CONNECTION_STRING }}
+          Environment=CosmosDb__DatabaseName=ArtGalleryDb
+          Environment=CosmosDb__ContainerName=ArtItems
 
           [Install]
-          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service"
-
-          echo "Startar om tjänsten..."
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
+          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && \
+          sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
 
           # --- PROXY SERVER: NGINX ---
-          echo "Konfigurerar Nginx Proxy..."
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "sudo apt-get update && sudo apt-get install -y nginx"
-          
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "echo 'server {
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "sudo apt-get update && sudo apt-get install -y nginx && \
+          echo 'server {
                 listen 80;
                 location / {
                     proxy_pass http://${{ secrets.APP_SERVER_IP }}:5000;
@@ -141,10 +113,4 @@ jobs:
                     proxy_set_header Host \$host;
                     proxy_cache_bypass \$http_upgrade;
                 }
-            }' | sudo tee /etc/nginx/sites-available/default"
-          
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "sudo systemctl restart nginx"
-
-          # --- SLUTKOLL ---
-          echo "Status för appen:"
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo systemctl status artgallery --no-pager"
+            }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
