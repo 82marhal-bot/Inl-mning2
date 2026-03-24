@@ -82,7 +82,7 @@ jobs:
           printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Vi skapar en config-fil som tvingar SSH att vara blind för ALLA säkerhetsrisker
+          # Viktigt: EOF får INTE ha mellanslag framför sig inuti en heredoc
           cat <<EOF > ~/.ssh/config
           Host *
             StrictHostKeyChecking no
@@ -96,15 +96,20 @@ jobs:
 
           # Steg 2: Skapa mapp på App-servern via tunnel
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-              azureuser@${{ secrets.APP_SERVER_IP }} \
-              "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
+            azureuser@${{ secrets.APP_SERVER_IP }} \
+            "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
 
           # Steg 3: Kopiera filer
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-              -r ./publish/* \
-              azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
+            -r ./publish/* \
+            azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
           # Steg 4: Starta om tjänsten
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-              azureuser@${{ secrets.APP_SERVER_IP }} \
-              "sudo systemctl restart artgallery"
+            azureuser@${{ secrets.APP_SERVER_IP }} \
+            "sudo systemctl restart artgallery"
+            
+          # Steg 5: Fixa Nginx på Proxy-servern
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+            azureuser@10.0.1.4 \
+            "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable nginx && sudo systemctl restart nginx"
