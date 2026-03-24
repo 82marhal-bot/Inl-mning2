@@ -82,7 +82,6 @@ jobs:
           printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Viktigt: EOF får INTE ha mellanslag framför sig inuti en heredoc
           cat <<EOF > ~/.ssh/config
           Host *
             StrictHostKeyChecking no
@@ -94,7 +93,7 @@ jobs:
           # TEST 1: Bastion
           ssh azureuser@${{ secrets.BASTION_HOST }} "echo 'Steg 1: Bastion OK!'"
 
-          # Steg 2: Skapa mapp på App-servern via tunnel
+          # Steg 2: Skapa mapp på App-servern
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
@@ -109,7 +108,22 @@ jobs:
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo systemctl restart artgallery"
             
-          # Steg 5: Fixa Nginx på Proxy-servern
+          # Steg 5: Säkra att Nginx är installerat på Proxy-servern
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@10.0.1.4 \
-            "sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable nginx && sudo systemctl restart nginx"
+            "sudo apt-get update && sudo apt-get install -y nginx"
+
+          # Steg 6: Konfigurera Reverse Proxy (Pekar mot App Server)
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+            azureuser@10.0.1.4 \
+            "echo 'server {
+                listen 80;
+                location / {
+                    proxy_pass http://${{ secrets.APP_SERVER_IP }};
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection keep-alive;
+                    proxy_set_header Host \$host;
+                    proxy_cache_bypass \$http_upgrade;
+                }
+            }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
