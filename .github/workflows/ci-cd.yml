@@ -79,26 +79,27 @@ jobs:
       - name: Driftsätt via Bastion till App Server
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          # Tvätta nyckeln från eventuella Windows-radbrytningar
-          sed -i 's/\r$//' ~/.ssh/id_rsa
+          # Vi använder printf för att bevara radbrytningar exakt
+          printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # 1. Rensa och bygg upp known_hosts
+          # Vi skannar bara Bastion först för att se om vi kommer dit
           ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+          
+          # Ett superenkelt test: Kan vi ens nå Bastion?
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no azureuser@${{ secrets.BASTION_HOST }} "echo 'Jag är inne i Bastion!'"
+
+          # Om det går, kör vi resten
           ssh-keyscan -H ${{ secrets.APP_SERVER_IP }} >> ~/.ssh/known_hosts
           
-          # 2. Skapa mappen (nu med -v för att se EXAKT vad som händer)
-          ssh -v -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
 
-          # 3. Kopiera filerna
           scp -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             -r ./publish/* \
             azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # 4. Starta om tjänsten
           ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo systemctl restart artgallery"
