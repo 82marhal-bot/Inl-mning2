@@ -79,27 +79,22 @@ jobs:
       - name: Driftsätt via Bastion till App Server
         run: |
           mkdir -p ~/.ssh
-          # Vi använder printf för att bevara radbrytningar exakt
           printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Vi skannar bara Bastion först för att se om vi kommer dit
-          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
-          
-          # Ett superenkelt test: Kan vi ens nå Bastion?
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no azureuser@${{ secrets.BASTION_HOST }} "echo 'Jag är inne i Bastion!'"
+          # Vi struntar i att spara hosts eftersom vi bygger om ofta
+          SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          PROXY_OPTS="-o ProxyJump=azureuser@${{ secrets.BASTION_HOST }}"
 
-          # Om det går, kör vi resten
-          ssh-keyscan -H ${{ secrets.APP_SERVER_IP }} >> ~/.ssh/known_hosts
-          
-          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
+          # TEST 1: Kommer vi in i Bastion?
+          ssh $SSH_OPTS azureuser@${{ secrets.BASTION_HOST }} "echo 'Steg 1: Bastion OK!'"
+
+          # Om steg 1 funkar, kör vi resten via hoppet
+          ssh $SSH_OPTS $PROXY_OPTS azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
 
-          scp -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            -r ./publish/* \
+          scp $SSH_OPTS $PROXY_OPTS -r ./publish/* \
             azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
+          ssh $SSH_OPTS $PROXY_OPTS azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo systemctl restart artgallery"
