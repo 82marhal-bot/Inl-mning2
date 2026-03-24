@@ -90,7 +90,7 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-          # Steg 1: Skapa mapp på App-servern
+          # Steg 1: Förbered mappar på App-servern
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
@@ -100,15 +100,30 @@ jobs:
             -r ./publish/* \
             azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # Steg 3: Fixa Nginx på Proxy-servern (Installera om det behövs)
+          # Steg 3: Skapa systemd-tjänstefil (Startar appen som bakgrundstjänst)
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@10.0.1.4 \
-            "sudo apt-get update && sudo apt-get install -y nginx"
+            azureuser@${{ secrets.APP_SERVER_IP }} \
+            "echo '[Unit]
+          Description=ArtGallery .NET App
+          After=network.target
 
-          # Steg 4: Konfigurera Reverse Proxy (Pekar mot port 5000)
+          [Service]
+          WorkingDirectory=/var/www/artgallery
+          ExecStart=/usr/bin/dotnet /var/www/artgallery/ArtGallery.dll
+          Restart=always
+          RestartSec=10
+          KillSignal=SIGINT
+          SyslogIdentifier=artgallery
+          Environment=ASPNETCORE_ENVIRONMENT=Production
+          Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
+
+          [Install]
+          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
+
+          # Steg 4: Konfigurera Reverse Proxy på Proxy-servern
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@10.0.1.4 \
-            "echo 'server {
+            "sudo apt-get update && sudo apt-get install -y nginx && echo 'server {
                 listen 80;
                 location / {
                     proxy_pass http://${{ secrets.APP_SERVER_IP }}:5000;
@@ -119,8 +134,3 @@ jobs:
                     proxy_cache_bypass \$http_upgrade;
                 }
             }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
-
-          # Steg 5: Starta om tjänsten med binding till 0.0.0.0
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo systemctl set-environment ASPNETCORE_URLS=http://0.0.0.0:5000 && sudo systemctl restart artgallery"
