@@ -90,30 +90,22 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-          # TEST 1: Bastion
-          ssh azureuser@${{ secrets.BASTION_HOST }} "echo 'Steg 1: Bastion OK!'"
-
-          # Steg 2: Skapa mapp på App-servern
+          # Steg 1: Skapa mapp på App-servern
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
 
-          # Steg 3: Kopiera filer
+          # Steg 2: Kopiera filer
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             -r ./publish/* \
             azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # Steg 4: Starta om tjänsten
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo systemctl restart artgallery"
-            
-          # Steg 5: Säkra att Nginx är installerat på Proxy-servern
+          # Steg 3: Fixa Nginx på Proxy-servern (Installera om det behövs)
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@10.0.1.4 \
             "sudo apt-get update && sudo apt-get install -y nginx"
 
-          # Steg 6: Konfigurera Reverse Proxy (Pekar mot App Server på port 5000)
+          # Steg 4: Konfigurera Reverse Proxy (Pekar mot port 5000)
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@10.0.1.4 \
             "echo 'server {
@@ -127,3 +119,8 @@ jobs:
                     proxy_cache_bypass \$http_upgrade;
                 }
             }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
+
+          # Steg 5: Starta om tjänsten med binding till 0.0.0.0
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+            azureuser@${{ secrets.APP_SERVER_IP }} \
+            "sudo systemctl set-environment ASPNETCORE_URLS=http://0.0.0.0:5000 && sudo systemctl restart artgallery"
