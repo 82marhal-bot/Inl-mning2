@@ -80,7 +80,6 @@ jobs:
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} -r ./publish/* azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
           # --- APP SERVER: STARTA MED COSMOS DB INFO ---
-          # Här använder vi namnen från din bild: ArtGallery och Paintings
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "chmod +x /var/www/artgallery/ArtGallery && \
           echo '[Unit]
           Description=ArtGallery App
@@ -94,8 +93,8 @@ jobs:
           User=azureuser
           Environment=ASPNETCORE_ENVIRONMENT=Production
           Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
-          Environment=ASPNETCORE_DATAPROTECTION__KEYMANAGEMENTOPTIONS__XMLREPOSITORY__DIRECTORYPATH=/var/www/artgallery/keys
-          Environment=CosmosDb__ConnectionString=\"${{ secrets.COSMOSDB_CONNECTION_STRING }}\"
+          Environment=ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+          Environment=CosmosDb__ConnectionString=${{ secrets.COSMOSDB_CONNECTION_STRING }}
           Environment=CosmosDb__DatabaseName=ArtGallery
           Environment=CosmosDb__ContainerName=Paintings
 
@@ -114,5 +113,7 @@ jobs:
                     proxy_set_header Connection \"upgrade\";
                     proxy_set_header Host \$host;
                     proxy_cache_bypass \$http_upgrade;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
                 }
             }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
