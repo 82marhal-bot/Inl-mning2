@@ -79,9 +79,9 @@ jobs:
           # --- APP SERVER: KOPIERING ---
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} -r ./publish/* azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # --- APP SERVER: STARTA MED COSMOS DB INFO ---
+          # --- APP SERVER: STARTA ---
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "chmod +x /var/www/artgallery/ArtGallery && \
-          echo '[Unit]
+          sudo bash -c \"echo '[Unit]
           Description=ArtGallery App
           After=network.target
 
@@ -99,21 +99,21 @@ jobs:
           Environment=CosmosDb__ContainerName=Paintings
 
           [Install]
-          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && \
+          WantedBy=multi-user.target' > /etc/systemd/system/artgallery.service\" && \
           sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
 
           # --- PROXY SERVER: NGINX ---
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "sudo apt-get update && sudo apt-get install -y nginx && \
-          echo 'server {
+          sudo bash -c \"echo 'server {
                 listen 80;
                 location / {
                     proxy_pass http://${{ secrets.APP_SERVER_IP }}:5000;
                     proxy_http_version 1.1;
-                    proxy_set_header Upgrade \$http_upgrade;
-                    proxy_set_header Connection \"upgrade\";
-                    proxy_set_header Host \$host;
-                    proxy_cache_bypass \$http_upgrade;
-                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto \$scheme;
+                    proxy_set_header Upgrade \\\$http_upgrade;
+                    proxy_set_header Connection \\\"upgrade\\\";
+                    proxy_set_header Host \\\$host;
+                    proxy_cache_bypass \\\$http_upgrade;
+                    proxy_set_header X-Forwarded-For \\\$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \\\$scheme;
                 }
-            }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
+            }' > /etc/nginx/sites-available/default\" && sudo systemctl restart nginx"
