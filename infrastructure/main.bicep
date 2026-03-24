@@ -218,6 +218,7 @@ resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2024-01-01' = {
 resource bastionNic 'Microsoft.Network/networkInterfaces@2024-01-01' = {
   name: 'nic-bastion-${prefix}'
   location: location
+  dependsOn: [ vnet ]
   properties: {
     ipConfigurations: [
       {
@@ -264,6 +265,7 @@ resource proxyPublicIp 'Microsoft.Network/publicIPAddresses@2024-01-01' = {
 resource proxyNic 'Microsoft.Network/networkInterfaces@2024-01-01' = {
   name: 'nic-proxy-${prefix}'
   location: location
+  dependsOn: [ vnet ]
   properties: {
     ipConfigurations: [
       {
@@ -303,6 +305,7 @@ resource proxyVm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
 resource appNic 'Microsoft.Network/networkInterfaces@2024-01-01' = {
   name: 'nic-app-${prefix}'
   location: location
+  dependsOn: [ vnet ]
   properties: {
     ipConfigurations: [
       {
