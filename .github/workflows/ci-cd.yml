@@ -90,26 +90,22 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-          # Steg 1: Förbered mappar och STOPPA tjänsten (viktigt för att kunna skriva över ArtGallery-filen)
+          # Steg 1: Stoppa tjänsten och rensa på APP-SERVERN
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo systemctl stop artgallery || true && sudo mkdir -p /var/www/artgallery/keys && sudo chown -R azureuser:azureuser /var/www/artgallery"
+            "sudo systemctl stop artgallery || true && sudo rm -rf /var/www/artgallery/* && sudo mkdir -p /var/www/artgallery/keys && sudo chown -R azureuser:azureuser /var/www/artgallery"
 
-          # Steg 2: Kopiera filer
+          # Steg 2: Kopiera filer till APP-SERVERN
           scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             -r ./publish/* \
             azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # Steg 3: Ge körrättigheter till den binära filen
+          # Steg 3: Ge rättigheter och starta tjänsten på APP-SERVERN
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
-            "chmod +x /var/www/artgallery/ArtGallery"
-
-          # Steg 4: Skapa/Uppdatera systemd-tjänstefil och STARTA igen
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
-            "echo '[Unit]
-          Description=ArtGallery Self-Contained App
+            "chmod +x /var/www/artgallery/ArtGallery && \
+            echo '[Unit]
+          Description=ArtGallery App
           After=network.target
 
           [Service]
@@ -123,24 +119,31 @@ jobs:
           Environment=ASPNETCORE_DATAPROTECTION__KEYMANAGEMENTOPTIONS__XMLREPOSITORY__DIRECTORYPATH=/var/www/artgallery/keys
 
           [Install]
-          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
+          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && \
+          sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
 
-          # Steg 5: Fixa Nginx på Proxy-servern
+          # Steg 4: Konfigurera Nginx på PROXY-SERVERN (VIKTIG FIX HÄR!)
+          # Vi ser till att den pekar på APP_SERVER_IP
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@10.0.1.4 \
-            "sudo apt-get update && sudo apt-get install -y nginx && echo 'server {
+            azureuser@${{ secrets.PROXY_SERVER_IP }} \
+            "sudo apt-get update && sudo apt-get install -y nginx && \
+            echo 'server {
                 listen 80;
                 location / {
                     proxy_pass http://${{ secrets.APP_SERVER_IP }}:5000;
                     proxy_http_version 1.1;
                     proxy_set_header Upgrade \$http_upgrade;
-                    proxy_set_header Connection keep-alive;
+                    proxy_set_header Connection \"upgrade\";
                     proxy_set_header Host \$host;
                     proxy_cache_bypass \$http_upgrade;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
                 }
-            }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
+            }' | sudo tee /etc/nginx/sites-available/default && \
+            sudo systemctl restart nginx"
 
-          # Steg 6: Verifiering
+          # Steg 5: Verifiering
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo systemctl status artgallery --no-pager"
