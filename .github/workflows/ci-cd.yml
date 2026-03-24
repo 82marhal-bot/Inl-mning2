@@ -82,11 +82,11 @@ jobs:
           printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Vi struntar i att spara hosts eftersom vi bygger om ofta
+          # Vi definierar strikta regler för att ignorera host-keys i båda hoppen
           SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-          PROXY_OPTS="-o ProxyJump=azureuser@${{ secrets.BASTION_HOST }}"
+          PROXY_OPTS="-o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} -o ProxyCommand='ssh -W %h:%p $SSH_OPTS azureuser@${{ secrets.BASTION_HOST }}'"
 
-          # TEST 1: Kommer vi in i Bastion?
+          # TEST 1: Kommer vi in i Bastion? (Detta vet vi funkar nu!)
           ssh $SSH_OPTS azureuser@${{ secrets.BASTION_HOST }} "echo 'Steg 1: Bastion OK!'"
 
           # Om steg 1 funkar, kör vi resten via hoppet
