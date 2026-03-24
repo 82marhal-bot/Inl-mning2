@@ -83,24 +83,24 @@ jobs:
           APP_SERVER_IP: ${{ secrets.APP_SERVER_IP }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Lita på både Bastion och App Server för att slippa manuella frågor
-          ssh-keyscan -H $BASTION_HOST >> ~/.ssh/known_hosts
-          ssh-keyscan -H $APP_SERVER_IP >> ~/.ssh/known_hosts
-
-          # 1. Förbered mappen på målservern
-          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@$BASTION_HOST \
-            azureuser@$APP_SERVER_IP \
+          # 1. Rensa och bygg upp known_hosts på nytt
+          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.APP_SERVER_IP }} >> ~/.ssh/known_hosts
+          
+          # 2. Skapa mappen och sätt rättigheter (vi kör SSH direkt mot variablerna)
+          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+            azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
 
-          # 2. Kopiera filer via Bastion-hopp
-          scp -o StrictHostKeyChecking=no -o ProxyJump=azureuser@$BASTION_HOST \
+          # 3. Kopiera filerna
+          scp -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             -r ./publish/* \
-            azureuser@$APP_SERVER_IP:/var/www/artgallery/
+            azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # 3. Starta om tjänsten så att den nya koden laddas in
-          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@$BASTION_HOST \
-            azureuser@$APP_SERVER_IP \
+          # 4. Starta om tjänsten
+          ssh -o StrictHostKeyChecking=no -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+            azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo systemctl restart artgallery"
