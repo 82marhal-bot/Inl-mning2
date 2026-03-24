@@ -69,12 +69,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Installera .NET för bygget
-        uses: actions/setup-dotnet@v4
+        uses: azure/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Publicera applikationen
-        run: dotnet publish ArtGallery/ArtGallery.csproj --configuration Release --output ./publish
+      - name: Publicera Self-Contained Applikation
+        run: dotnet publish ArtGallery/ArtGallery.csproj --configuration Release --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish
 
       - name: Driftsätt via Bastion
         run: |
@@ -90,7 +90,7 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-          # Steg 1: Förbered mappar och rättigheter på App-servern
+          # Steg 1: Förbered mappar och rättigheter
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo mkdir -p /var/www/artgallery && sudo chown -R azureuser:azureuser /var/www/artgallery"
@@ -100,21 +100,21 @@ jobs:
             -r ./publish/* \
             azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # Steg 3: Installera .NET Runtime på App-servern
+          # Steg 3: Ge körrättigheter till den körbara filen (eftersom det är en binär nu)
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo apt-get update && sudo apt-get install -y dotnet-runtime-10.0"
+            "chmod +x /var/www/artgallery/ArtGallery"
 
-          # Steg 4: Skapa systemd-tjänstefil (Viktigt med ArtGallery.dll case-sensitivity!)
+          # Steg 4: Skapa systemd-tjänstefil (Notera: Vi kör filen direkt, inte via 'dotnet')
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "echo '[Unit]
-          Description=ArtGallery App
+          Description=ArtGallery Self-Contained App
           After=network.target
 
           [Service]
           WorkingDirectory=/var/www/artgallery
-          ExecStart=/usr/bin/dotnet /var/www/artgallery/ArtGallery.dll
+          ExecStart=/var/www/artgallery/ArtGallery
           Restart=always
           RestartSec=10
           Environment=ASPNETCORE_ENVIRONMENT=Production
@@ -123,7 +123,7 @@ jobs:
           [Install]
           WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
 
-          # Steg 5: Konfigurera Nginx på Proxy-servern
+          # Steg 5: Fixa Nginx på Proxy-servern
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@10.0.1.4 \
             "sudo apt-get update && sudo apt-get install -y nginx && echo 'server {
@@ -138,8 +138,7 @@ jobs:
                 }
             }' | sudo tee /etc/nginx/sites-available/default && sudo systemctl restart nginx"
 
-          # Steg 6: VERIFIERING - Kolla om tjänsten faktiskt körs
-          echo "--- VERIFIERING AV TJÄNSTESTATUS ---"
+          # Steg 6: Verifiering
           ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
             azureuser@${{ secrets.APP_SERVER_IP }} \
             "sudo systemctl status artgallery --no-pager"
