@@ -90,21 +90,24 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-          # Steg 1: Stoppa tjänsten och rensa på APP-SERVERN
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo systemctl stop artgallery || true && sudo rm -rf /var/www/artgallery/* && sudo mkdir -p /var/www/artgallery/keys && sudo chown -R azureuser:azureuser /var/www/artgallery"
+          # --- APP SERVER: FÖRBEREDELSER ---
+          echo "Stoppar tjänsten artgallery..."
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo systemctl stop artgallery || true"
+          
+          echo "Rensar gamla filer och skapar mappar..."
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo rm -rf /var/www/artgallery/*"
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo mkdir -p /var/www/artgallery/keys"
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo chown -R azureuser:azureuser /var/www/artgallery"
 
-          # Steg 2: Kopiera filer till APP-SERVERN
-          scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            -r ./publish/* \
-            azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
+          # --- APP SERVER: KOPIERING & START ---
+          echo "Laddar upp den nya versionen..."
+          scp -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} -r ./publish/* azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          # Steg 3: Ge rättigheter och starta tjänsten på APP-SERVERN
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
-            "chmod +x /var/www/artgallery/ArtGallery && \
-            echo '[Unit]
+          echo "Sätter körrättigheter..."
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "chmod +x /var/www/artgallery/ArtGallery"
+
+          echo "Uppdaterar systemd-tjänstefilen..."
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "echo '[Unit]
           Description=ArtGallery App
           After=network.target
 
@@ -119,15 +122,16 @@ jobs:
           Environment=ASPNETCORE_DATAPROTECTION__KEYMANAGEMENTOPTIONS__XMLREPOSITORY__DIRECTORYPATH=/var/www/artgallery/keys
 
           [Install]
-          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service && \
-          sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
+          WantedBy=multi-user.target' | sudo tee /etc/systemd/system/artgallery.service"
 
-          # Steg 4: Konfigurera Nginx på PROXY-SERVERN (VIKTIG FIX HÄR!)
-          # Vi ser till att den pekar på APP_SERVER_IP
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.PROXY_SERVER_IP }} \
-            "sudo apt-get update && sudo apt-get install -y nginx && \
-            echo 'server {
+          echo "Startar om tjänsten..."
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo systemctl daemon-reload && sudo systemctl enable artgallery && sudo systemctl restart artgallery"
+
+          # --- PROXY SERVER: NGINX ---
+          echo "Konfigurerar Nginx Proxy..."
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "sudo apt-get update && sudo apt-get install -y nginx"
+          
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "echo 'server {
                 listen 80;
                 location / {
                     proxy_pass http://${{ secrets.APP_SERVER_IP }}:5000;
@@ -136,14 +140,11 @@ jobs:
                     proxy_set_header Connection \"upgrade\";
                     proxy_set_header Host \$host;
                     proxy_cache_bypass \$http_upgrade;
-                    proxy_set_header X-Real-IP \$remote_addr;
-                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto \$scheme;
                 }
-            }' | sudo tee /etc/nginx/sites-available/default && \
-            sudo systemctl restart nginx"
+            }' | sudo tee /etc/nginx/sites-available/default"
+          
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@10.0.1.4 "sudo systemctl restart nginx"
 
-          # Steg 5: Verifiering
-          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
-            azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo systemctl status artgallery --no-pager"
+          # --- SLUTKOLL ---
+          echo "Status för appen:"
+          ssh -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} azureuser@${{ secrets.APP_SERVER_IP }} "sudo systemctl status artgallery --no-pager"
