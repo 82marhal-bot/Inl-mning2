@@ -422,3 +422,4 @@ output cosmosKey string = cosmosAccount.listKeys().primaryMasterKey
 
 @secure()
 output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
+
