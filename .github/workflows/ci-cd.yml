@@ -82,19 +82,24 @@ jobs:
           printf "%s\n" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           
-          # Vi definierar strikta regler för att ignorera host-keys i båda hoppen
-          SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-          PROXY_OPTS="-o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} -o ProxyCommand='ssh -W %h:%p $SSH_OPTS azureuser@${{ secrets.BASTION_HOST }}'"
+          # Vi kör med enkla flaggor direkt i kommandot för att slippa citat-strul
+          # TEST 1: Bastion
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null azureuser@${{ secrets.BASTION_HOST }} "echo 'Steg 1: Bastion OK!'"
 
-          # TEST 1: Kommer vi in i Bastion? (Detta vet vi funkar nu!)
-          ssh $SSH_OPTS azureuser@${{ secrets.BASTION_HOST }} "echo 'Steg 1: Bastion OK!'"
+          # Steg 2: Skapa mapp på App-servern via tunnel
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+              azureuser@${{ secrets.APP_SERVER_IP }} \
+              "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
 
-          # Om steg 1 funkar, kör vi resten via hoppet
-          ssh $SSH_OPTS $PROXY_OPTS azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo mkdir -p /var/www/artgallery && sudo chown azureuser:azureuser /var/www/artgallery"
+          # Steg 3: Kopiera filer
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+              -r ./publish/* \
+              azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
 
-          scp $SSH_OPTS $PROXY_OPTS -r ./publish/* \
-            azureuser@${{ secrets.APP_SERVER_IP }}:/var/www/artgallery/
-
-          ssh $SSH_OPTS $PROXY_OPTS azureuser@${{ secrets.APP_SERVER_IP }} \
-            "sudo systemctl restart artgallery"
+          # Steg 4: Starta om tjänsten
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o ProxyJump=azureuser@${{ secrets.BASTION_HOST }} \
+              azureuser@${{ secrets.APP_SERVER_IP }} \
+              "sudo systemctl restart artgallery"
