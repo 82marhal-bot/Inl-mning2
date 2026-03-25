@@ -94,7 +94,8 @@ jobs:
           Environment=ASPNETCORE_ENVIRONMENT=Production
           Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
           Environment=ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
-          Environment=CosmosDb__ConnectionString=${{ secrets.COSMOSDB_CONNECTION_STRING }}
+          Environment=CosmosDb__AccountEndpoint=${{ secrets.COSMOS_ENDPOINT }}
+          Environment=CosmosDb__AccountKey=${{ secrets.COSMOS_KEY }}
           Environment=CosmosDb__DatabaseName=ArtGallery
           Environment=CosmosDb__ContainerName=Paintings
 
