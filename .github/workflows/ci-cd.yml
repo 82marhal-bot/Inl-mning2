@@ -98,6 +98,8 @@ jobs:
           Environment=CosmosDb__AccountKey=${{ secrets.COSMOS_KEY }}
           Environment=CosmosDb__DatabaseName=ArtGallery
           Environment=CosmosDb__ContainerName=Paintings
+          Environment=BlobStorage__ConnectionString=${{ secrets.BLOB_CONNECTION_STRING }}
+          Environment=BlobStorage__ContainerName=paintings
 
           [Install]
           WantedBy=multi-user.target' > /etc/systemd/system/artgallery.service\" && \
