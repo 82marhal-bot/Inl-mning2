@@ -151,15 +151,21 @@ Git Push
 └─────────────────────┘
 ```
 
-CD-steget körs enbart vid push till `main` och kräver att följande GitHub Secrets är konfigurerade:
 
-| Secret | Beskrivning |
-|---|---|
-| `SSH_PRIVATE_KEY` | Privat SSH-nyckel för åtkomst via Bastion |
-| `BASTION_HOST` | Bastionens publika IP-adress |
-| `APP_SERVER_IP` | App Serverns interna IP-adress |
-| `AZURE_CREDENTIALS` | Azure service principal för Bicep-driftsättning |
+### Konfiguration av GitHub Secrets
 
+För att CD-steget ska fungera och applikationen ska kunna kommunicera med Azure-tjänsterna, måste följande GitHub Secrets konfigureras i ditt repository under `Settings > Secrets and variables > Actions`:
+
+| Secret | Beskrivning | Var hittar jag den i Azure? |
+| :--- | :--- | :--- |
+| `AZURE_CREDENTIALS` | Service Principal (JSON) | Skapas via `az ad sp create-for-rbac` |
+| `SSH_PRIVATE_KEY` | Privat SSH-nyckel | Din lokala fil `~/.ssh/id_rsa` |
+| `SSH_PUBLIC_KEY` | Publik SSH-nyckel | Din lokala fil `~/.ssh/id_rsa.pub` |
+| `BASTION_HOST` | Bastionens publika IP-adress | Bastion -> Översikt -> Public IP |
+| `APP_SERVER_IP` | App-serverns privata IP | VM -> Nätverk -> Privat IP (t.ex. 10.0.1.x) |
+| `COSMOS_ENDPOINT` | URI till Cosmos DB | Cosmos DB -> Keys -> URI |
+| `COSMOS_KEY` | Primary Key till Cosmos DB | Cosmos DB -> Keys -> Primary Key |
+| `BLOB_CONNECTION_STRING` | Connection string till Storage | Storage Account -> Access Keys -> Connection string |
 ---
 
 ## Projektstruktur
